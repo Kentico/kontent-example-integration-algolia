@@ -1,5 +1,5 @@
 import { FC, useCallback, useEffect, useRef } from "react";
-import { useInfiniteHits, useInstantSearch, usePagination, useSearchBox } from "react-instantsearch-hooks-web";
+import { useInfiniteHits, useInstantSearch, usePagination, useSearchBox } from "react-instantsearch";
 
 import { AlgoliaItem } from "./functions/utils/algoliaItem";
 import { HitRow } from "./HitRow";

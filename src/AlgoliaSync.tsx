@@ -1,6 +1,6 @@
-import { FC, useState } from "react";
+import { FC, useContext, useState } from "react";
 
-import { useConfig } from "./ConfigContext";
+import { ConfigContext } from "./ConfigContext";
 import { InitRequestBody } from "./shared/types/initRequestBody";
 
 const initFunctionUrl = "/.netlify/functions/algolia-init-function";
@@ -17,7 +17,7 @@ type Props = Readonly<{
 }>;
 
 export const AlgoliaSync: FC<Props> = props => {
-  const config = useConfig();
+  const config = useContext(ConfigContext);
   const [synchronizationStatus, setSynchronizationStatus] = useState(SynchronizationStatus.NotStarted);
 
   const syncSearch = () => {

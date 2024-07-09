@@ -1,8 +1,8 @@
 import algoliasearch from "algoliasearch";
-import { FC, ReactElement, useMemo } from "react";
-import { Configure, InstantSearch } from "react-instantsearch-hooks-web";
+import { FC, ReactElement, useContext, useMemo } from "react";
+import { Configure, InstantSearch } from "react-instantsearch";
 
-import { useConfig } from "./ConfigContext";
+import { ConfigContext } from "./ConfigContext";
 import { customUserAgent } from "./shared/algoliaUserAgent";
 
 type Props = Readonly<{
@@ -10,7 +10,7 @@ type Props = Readonly<{
 }>;
 
 export const AlgoliaSearchContext: FC<Props> = props => {
-  const config = useConfig();
+  const config = useContext(ConfigContext);
   const searchClient = useMemo(
     () => algoliasearch(config.algoliaAppId, config.algoliaSearchKey, { userAgent: customUserAgent }),
     [config.algoliaAppId, config.algoliaSearchKey],

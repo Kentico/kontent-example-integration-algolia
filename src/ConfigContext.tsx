@@ -1,5 +1,6 @@
-import React, { FC, ReactElement, useContext, useEffect, useState } from "react";
+import React, { FC, ReactElement, useEffect, useState } from "react";
 
+import { Config } from "./shared/types/config";
 import { findMissingStringProps } from "./shared/utils/findMissingStringProps";
 
 type Props = Readonly<{
@@ -32,22 +33,13 @@ export const ConfigProvider: FC<Props> = props => {
   }
 
   return (
-    <Context.Provider value={config}>
+    <ConfigContext.Provider value={config}>
       {props.children}
-    </Context.Provider>
+    </ConfigContext.Provider>
   );
 };
 
 ConfigProvider.displayName = "ConfigProvider";
-
-export type Config = Readonly<{
-  algoliaAppId: string;
-  algoliaSearchKey: string;
-  algoliaIndexName: string;
-  slugCodename: string;
-  projectId: string;
-  language: string;
-}>;
 
 const emptyConfig: Config = {
   slugCodename: "",
@@ -58,9 +50,7 @@ const emptyConfig: Config = {
   projectId: "",
 };
 
-const Context = React.createContext<Config>(emptyConfig);
-
-export const useConfig = () => useContext(Context);
+export const ConfigContext = React.createContext<Config>(emptyConfig);
 
 const isValidConfig = (c: Readonly<Record<string, unknown>> | null): c is Config =>
   !findMissingStringProps(Object.keys(emptyConfig))(c).length;

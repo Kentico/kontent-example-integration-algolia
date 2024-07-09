@@ -121,13 +121,13 @@ You can explore your own generated index to figure out how to implement your sea
 
 ```bash
 # Initial project setup
-$ npm install
+$ npm ci
 
 # Build the project
 $ npm run build
 ```
 
-The custom element is created with [Create React App](https://create-react-app.dev/).
+The integration is created with [Vite](https://vitejs.dev/).
 
 ## Contributors
 

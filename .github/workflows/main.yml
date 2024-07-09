@@ -32,4 +32,5 @@ jobs:
       - run: npm ci
       - uses: dprint/check@v2.2
       - run: npm run build
-      - run: npm run lintFunctions
+      - run: npm run checkFunctions
+      - run: npm run lint

@@ -1,6 +1,6 @@
 import { Hit, HitAttributeHighlightResult } from "instantsearch.js";
 import { FC } from "react";
-import { Highlight } from "react-instantsearch-hooks-web";
+import { Highlight } from "react-instantsearch";
 
 import { AlgoliaItem } from "./functions/utils/algoliaItem";
 

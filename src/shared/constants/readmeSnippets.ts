@@ -1,4 +1,4 @@
-import { Config } from "../../ConfigContext";
+import { Config } from "../types/config";
 import { InitRequestBody } from "../types/initRequestBody";
 
 // Remember to update readme when you change this file.

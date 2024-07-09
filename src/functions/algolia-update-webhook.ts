@@ -63,7 +63,7 @@ export const handler: Handler = serializeUncaughtErrorsHandler(async (event) => 
       .filter(n => n.message.object_type === "content_item")
       .map(async notification => {
         const deliverClient = new DeliveryClient({
-          projectId: notification.message.environment_id,
+          environmentId: notification.message.environment_id,
           globalHeaders: () => sdkHeaders,
         });
 

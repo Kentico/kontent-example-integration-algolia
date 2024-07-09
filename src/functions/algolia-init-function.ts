@@ -41,7 +41,7 @@ export const handler: Handler = serializeUncaughtErrorsHandler(async (event) => 
     };
   }
 
-  const deliverClient = new DeliveryClient({ projectId: body.projectId, globalHeaders: () => sdkHeaders });
+  const deliverClient = new DeliveryClient({ environmentId: body.projectId, globalHeaders: () => sdkHeaders });
   const allItems = await getAllContentFromProject(deliverClient, body.language);
   const allItemsMap = new Map(allItems.map(i => [i.system.codename, i]));
   const recordItems = allItems
