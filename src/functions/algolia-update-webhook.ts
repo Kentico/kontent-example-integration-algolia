@@ -1,5 +1,10 @@
 import { DeliveryClient, IContentItem } from "@kontent-ai/delivery-sdk";
-import { IWebhookDeliveryResponse, SignatureHelper } from "@kontent-ai/webhook-helper";
+import {
+  SignatureHelper,
+  WebhookItemNotification,
+  WebhookNotification,
+  WebhookResponse,
+} from "@kontent-ai/webhook-helper";
 import { Handler } from "@netlify/functions";
 import createAlgoliaClient, { SearchIndex } from "algoliasearch";
 
@@ -11,6 +16,8 @@ import { sdkHeaders } from "./utils/sdkHeaders";
 import { serializeUncaughtErrorsHandler } from "./utils/serializeUncaughtErrorsHandler";
 
 const { envVars, missingEnvVars } = createEnvVars(["KONTENT_SECRET", "ALGOLIA_API_KEY"] as const);
+
+const signatureHeaderName = "x-kontent-ai-signature";
 
 export const handler: Handler = serializeUncaughtErrorsHandler(async (event) => {
   if (event.httpMethod !== "POST") {
@@ -31,13 +38,17 @@ export const handler: Handler = serializeUncaughtErrorsHandler(async (event) => 
   // Consistency check - make sure your netlify environment variable and your webhook secret matches
   const signatureHelper = new SignatureHelper();
   if (
-    !event.headers["x-kc-signature"]
-    || !signatureHelper.isValidSignatureFromString(event.body, envVars.KONTENT_SECRET, event.headers["x-kc-signature"])
+    !event.headers[signatureHeaderName]
+    || !signatureHelper.isValidSignatureFromString(
+      event.body,
+      envVars.KONTENT_SECRET,
+      event.headers[signatureHeaderName],
+    )
   ) {
     return { statusCode: 401, body: "Unauthorized" };
   }
 
-  const webhookData: IWebhookDeliveryResponse = JSON.parse(event.body);
+  const webhookData: WebhookResponse = JSON.parse(event.body);
 
   const queryParams = event.queryStringParameters;
   if (!areValidQueryParams(queryParams)) {
@@ -47,40 +58,26 @@ export const handler: Handler = serializeUncaughtErrorsHandler(async (event) => 
   const algoliaClient = createAlgoliaClient(queryParams.appId, envVars.ALGOLIA_API_KEY, { userAgent: customUserAgent });
   const index = algoliaClient.initIndex(queryParams.index);
 
-  const deliverClient = new DeliveryClient({
-    projectId: webhookData.message.project_id,
-    globalHeaders: () => sdkHeaders,
-  });
+  const actions = (await Promise.all(
+    webhookData.notifications
+      .filter(n => n.message.object_type === "content_item")
+      .map(async notification => {
+        const deliverClient = new DeliveryClient({
+          projectId: notification.message.environment_id,
+          globalHeaders: () => sdkHeaders,
+        });
 
-  const actions = (await Promise.all(webhookData.data.items
-    .map(async item => {
-      const existingAlgoliaItems = await findAgoliaItems(index, item.codename, item.language);
-
-      if (!existingAlgoliaItems.length) {
-        const deliverItems = await findDeliverItemWithChildrenByCodename(deliverClient, item.codename, item.language);
-        const deliverItem = deliverItems.get(item.codename);
-
-        return [{
-          objectIdsToRemove: [],
-          recordsToReindex: deliverItem && canConvertToAlgoliaItem(queryParams.slug)(deliverItem)
-            ? [convertToAlgoliaItem(deliverItems, queryParams.slug)(deliverItem)]
-            : [],
-        }];
-      }
-
-      return Promise.all(existingAlgoliaItems
-        .map(async i => {
-          const deliverItems = await findDeliverItemWithChildrenByCodename(deliverClient, i.codename, i.language);
-          const deliverItem = deliverItems.get(i.codename);
-
-          return deliverItem
-            ? {
-              objectIdsToRemove: [] as string[],
-              recordsToReindex: [convertToAlgoliaItem(deliverItems, queryParams.slug)(deliverItem)],
-            }
-            : { objectIdsToRemove: [i.objectID], recordsToReindex: [] };
-        }));
-    }))).flat();
+        if (isItemNotification(notification)) {
+          return await updateItem({
+            index,
+            deliverClient,
+            slug: queryParams.slug,
+            item: notification.data.system,
+          });
+        }
+        return [];
+      }),
+  )).flat();
 
   const recordsToReIndex = [
     ...new Map(actions.flatMap(a => a.recordsToReindex.map(i => [i.codename, i] as const))).values(),
@@ -100,10 +97,50 @@ export const handler: Handler = serializeUncaughtErrorsHandler(async (event) => 
   };
 });
 
-const findAgoliaItems = async (index: SearchIndex, itemCodename: string, languageCodename: string) => {
+type UpdateItemParams = Readonly<{
+  index: SearchIndex;
+  deliverClient: DeliveryClient;
+  slug: string;
+  item: WebhookItemNotification["data"]["system"];
+}>;
+
+const updateItem = async (params: UpdateItemParams) => {
+  const existingAlgoliaItems = await findAgoliaItems(params.index, params.item.id, params.item.language);
+
+  if (!existingAlgoliaItems.length) {
+    const deliverItems = await findDeliverItemWithChildrenByCodename(
+      params.deliverClient,
+      params.item.codename,
+      params.item.language,
+    );
+    const deliverItem = deliverItems.get(params.item.codename);
+
+    return [{
+      objectIdsToRemove: [],
+      recordsToReindex: deliverItem && canConvertToAlgoliaItem(params.slug)(deliverItem)
+        ? [convertToAlgoliaItem(deliverItems, params.slug)(deliverItem)]
+        : [],
+    }];
+  }
+
+  return Promise.all(existingAlgoliaItems
+    .map(async i => {
+      const deliverItems = await findDeliverItemWithChildrenByCodename(params.deliverClient, i.codename, i.language);
+      const deliverItem = deliverItems.get(i.codename);
+
+      return deliverItem
+        ? {
+          objectIdsToRemove: [] as string[],
+          recordsToReindex: [convertToAlgoliaItem(deliverItems, params.slug)(deliverItem)],
+        }
+        : { objectIdsToRemove: [i.objectID], recordsToReindex: [] };
+    }));
+};
+
+const findAgoliaItems = async (index: SearchIndex, itemId: string, languageCodename: string) => {
   try {
     const response = await index.search<AlgoliaItem>("", {
-      facetFilters: [`content.codename: ${itemCodename}`, `language: ${languageCodename}`],
+      facetFilters: [`content.id: ${itemId}`, `language: ${languageCodename}`],
     });
 
     return response.hits;
@@ -142,3 +179,6 @@ const areValidQueryParams = (v: Record<string, unknown> | null): v is ExpectedQu
   && hasStringProperty(nameOf<ExpectedQueryParams>("slug"), v)
   && hasStringProperty(nameOf<ExpectedQueryParams>("appId"), v)
   && hasStringProperty(nameOf<ExpectedQueryParams>("index"), v);
+
+const isItemNotification = (notification: WebhookNotification): notification is WebhookItemNotification =>
+  notification.message.object_type === "content_item";
