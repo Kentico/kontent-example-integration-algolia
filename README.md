@@ -54,13 +54,13 @@ This implementation also supports **tracking changes in [linked content](https:/
    2. **algolia-update-webhook** is the function you want to call via a webhook from Kontent.ai to notify Algolia there's been a change to your content and that it has to be updated and how.
 
 2. ### Create a new Webhook in Kontent.ai
-   The next step is [creating a new webhook in Kontent.ai](https://kontent.ai/learn/tutorials/develop-apps/integrate/webhooks#a-create-a-webhook).
+   The next step is [creating a new webhook in Kontent.ai](https://kontent.ai/learn/docs/webhooks/webhooks/javascript#a-create-webhooks).
 
    Fill out the following into the webhook's **URL address** field:
 
    {**algolia-update-webhook endpoint URL**}?appId={**algolia application id**}&index={**algolia search index name**}&slug={**codename of content's slug property**}
 
-   Subsequently, set the Kontent.ai **Delivery API triggers** to watch for _Publish_ and _Unpublish_ of your content items.
+   Subsequently, set the Kontent.ai **Delivery API triggers** to watch for changes in _published data_ on _content item events_.
 
    At the end, this is an example of how your webhook might look like:
 
