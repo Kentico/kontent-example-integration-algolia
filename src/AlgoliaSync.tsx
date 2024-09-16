@@ -3,7 +3,7 @@ import { FC, useContext, useState } from "react";
 import { ConfigContext } from "./ConfigContext";
 import { InitRequestBody } from "./shared/types/initRequestBody";
 
-const initFunctionUrl = "/.netlify/functions/algolia-init-function";
+const initFunctionUrl = "http://localhost:8888/.netlify/functions/algolia-init-function";
 
 enum SynchronizationStatus {
   NotStarted = "NotStarted",

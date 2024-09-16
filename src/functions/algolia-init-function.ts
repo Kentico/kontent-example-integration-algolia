@@ -21,6 +21,7 @@ import { serializeUncaughtErrorsHandler } from "./utils/serializeUncaughtErrorsH
 const { envVars, missingEnvVars } = createEnvVars(["ALGOLIA_API_KEY"] as const);
 
 export const handler: Handler = serializeUncaughtErrorsHandler(async (event) => {
+  console.log("env vars", envVars);
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: "Method Not Allowed" };
   }
